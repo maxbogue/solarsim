@@ -4,34 +4,15 @@
     <meta charset="utf-8">
     <title></title>
     <style type="text/css">
-        body {
-            text-align: center;
-        }
-        canvas {
-        background-color: #000000;
-        }
-        #outer {
-            display: inline-block;
-            position: relative;
-        }
-        #overlay {
+        html, body {
             height: 100%;
-            left: 0px;
-            position: absolute;
-            top: 0px;
             width: 100%;
-        }
-        #info {
-            color: #FFF;
-            display: none;
-            font-family: "Courier New", Courier, monospace;
-            font-size: 13px;
-            padding-top: 5px;
-            position: relative;
+            margin: 0;
+            padding: 0;
             text-align: center;
         }
-        #info span {
-            font-size: 13px;
+        #game {
+            background-color: #000000;
         }
     </style>
     <script src="/solarsim.js"></script>
@@ -39,11 +20,16 @@
         function main() {
             var canvas = document.getElementById("game");
             var ctx = canvas.getContext("2d");
-
             var sun = makeBody(1.989e30, 0, 0, 0, 0, 6.963e8);
             var planets = [
-              //makeBody(3.3011×1023, 0, 46001200, 30300, 0, 2.4397e6),
-              makeBody(5.972e24, 0, 1.471e11, 30300, 0, 6.371e6),
+              makePlanet(3.3011e23, 5.7909e10, 0.205630, 2439700),
+              makePlanet(4.8675e24, 1.0820e11, 0.006772, 6051800),
+              makePlanet(5.972e24, 1.4960e11, 0.0167086, 6371000),
+              makePlanet(6.4171e23, 2.2793e11, 0.0934, 3389500),
+              makePlanet(1.8986e27, 7.7829e11, 0.048498, 69911000),
+              makePlanet(5.56836e26, 1.4294e12, 0.05555, 58232000),
+              makePlanet(8.6810e25, 2.87504e12, 0.046381, 25362000),
+              makePlanet(1.0243e26, 4.50445e12, 0.009456, 24622000),
             ];
             sim = new SolarSim(ctx, sun, planets);
             sim.start();
@@ -51,14 +37,7 @@
     </script>
 </head>
 <body>
-    <div id=outer>
-        <canvas id=game width="800" height="800"></canvas>
-        <div id=overlay>
-            <div id=info>
-                <span id=p1></span> vs <span id=p2></span> in <span id=map></span>
-            </div>
-        </div>
-    </div>
+    <canvas id=game></canvas>
     <script>main()</script>
 </body>
 </html>

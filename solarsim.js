@@ -1,19 +1,22 @@
 var G = 6.674e-11
-var FPS = 30;
-var STEPS_PER_MS = 60000;
+var FPS = 60;
+var SECS_PER_STEP = 10;
+var STEPS_PER_MS = 10000;
 var MS_PER_FRAME = Math.floor(1000 / FPS);
-var OFFSET = 400;
 var AU = 1.496e11;
-var SCALE = OFFSET / 2 / AU;
+var SCALE = 1 / 31 / AU;
+var SOLAR_MASS = 1.989e30;
 
-var PLAYER_COLORS = [
-    ["#CCCCCC", "#666666"],
-    ["#CCFF00", "#99BF00"],
-    ["#00CCFF", "#0099BF"],
-    ["#FF00CC", "#BF0099"],
-    ["#FFCC00", "#BF9900"],
-    ["#00FFCC", "#00BF99"],
-    ["#CC00FF", "#9900BF"],
+var PLANET_COLORS = [
+    "#FFF000",
+    "#E37242",
+    "#BF290B",
+    "#18A8A7",
+    "#A84E32",
+    "#F55B47",
+    "#E3AC09",
+    "#65CEE6",
+    "#0779B8",
 ];
 
 function extend(dest, source) {
@@ -39,8 +42,7 @@ function dist(p1, p2) {
 }
 
 function bodyRadius(body) {
-    return Math.ceil(Math.sqrt(body.size) / 3000);
-    //return Mail.ceil(body.size / 2.4397e6);
+    return 1.5;
 }
 
 function planetFontSize(ctx, planet) {
@@ -48,26 +50,29 @@ function planetFontSize(ctx, planet) {
 }
 
 function drawBody(ctx, body, color) {
+    var xOffset = Math.floor(ctx.canvas.width / 2);
+    var yOffset = Math.floor(ctx.canvas.height / 2);
+    var scale = Math.min(xOffset, yOffset) * SCALE;
+    var x = body.x * scale + xOffset;
+    var y = -body.y * scale + yOffset;
     ctx.beginPath();
-    ctx.arc(body.x * SCALE + OFFSET, -body.y * SCALE + OFFSET, bodyRadius(body), 0, Math.PI * 2, false);
+    ctx.arc(x, y, bodyRadius(body), 0, Math.PI * 2, false);
     ctx.closePath();
-    ctx.fillStyle = PLAYER_COLORS[1][0];
+    ctx.fillStyle = PLANET_COLORS[color];
     ctx.fill();
-    //ctx.lineWidth = 2;
-    //ctx.strokeStyle = PLAYER_COLORS[1][1];
-    //ctx.stroke();
-    //ctx.font = planetFontSize(ctx, planet) + "px Helvetica";
-    //ctx.textAlign = "center";
-    //ctx.textBaseline = "middle";
-    //ctx.fillStyle = "#000000";
-    //ctx.fillText(Math.floor(planet.ships), planet.x, planet.y);
 }
 
 function drawSystem(ctx, sun, bodies) {
-    //ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    drawBody(ctx, sun);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    if (ctx.canvas.width != window.innerWidth) {
+        ctx.canvas.width  = window.innerWidth;
+    }
+    if (ctx.canvas.height != window.innerHeight) {
+        ctx.canvas.height = window.innerHeight;
+    }
+    drawBody(ctx, sun, 0);
     for (var i = 0; i < bodies.length; i++) {
-        drawBody(ctx, bodies[i]);
+        drawBody(ctx, bodies[i], i + 1);
     }
 }
 
@@ -82,20 +87,22 @@ function makeBody(mass, x, y, vx, vy, size) {
   return body;
 }
 
+function makePlanet(mass, a, e, size) {
+  var p = a * (1 - e);
+  var vp = Math.sqrt(G * SOLAR_MASS * (2 / p - 1 / a));
+  return makeBody(mass, 0, p, vp, 0, size);
+}
+
 function step(sun, bodies) {
-  var new_bodies = [];
   for (var i = 0; i < bodies.length; i++) {
     var body = bodies[i];
     var a = accelerationFromGravity(body, sun);
-    var new_x = body.x + body.vx;
-    var new_y = body.y + body.vy;
-    var new_vx = body.vx + a[0];
-    var new_vy = body.vy + a[1];
-    new_bodies.push(makeBody(body.mass, new_x, new_y, new_vx, new_vy, body.size));
+    body.x = body.x + body.vx * SECS_PER_STEP;
+    body.y = body.y + body.vy * SECS_PER_STEP;
+    body.vx = body.vx + a[0] * SECS_PER_STEP;
+    body.vy = body.vy + a[1] * SECS_PER_STEP;
   }
-  return new_bodies;
 }
-  
 
 function accelerationFromGravity(b1, b2) {
   var dx = b2.x - b1.x;
@@ -104,7 +111,6 @@ function accelerationFromGravity(b1, b2) {
   return [dx * a, dy * a];
 }
   
-
 function SolarSim(ctx, sun, bodies) {
     this.ctx = ctx;
     this.sun = sun;
@@ -124,14 +130,16 @@ SolarSim.prototype.start = function() {
 
 SolarSim.prototype.step = function() {
     for (var i = 0; i < STEPS_PER_MS; i++) {
-      this.bodies = step(this.sun, this.bodies);
+      step(this.sun, this.bodies);
       this.stepCount++;
     }
     this.nextStepAt += 1;
     var that = this;
+    var dt = this.nextFrameAt - Date.now();
+    //console.log(dt);
     setTimeout(function() {
         that.step();
-    }, this.nextStepAt - Date.now());
+    }, dt);
 }
 
 SolarSim.prototype.render = function() {
