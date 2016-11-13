@@ -5,14 +5,15 @@
     <title></title>
     <style type="text/css">
         html, body {
+            background-color: #000000;
             height: 100%;
-            width: 100%;
             margin: 0;
             padding: 0;
             text-align: center;
+            width: 100%;
         }
         #game {
-            background-color: #000000;
+            display: block;
         }
     </style>
     <script src="/solarsim.js"></script>
@@ -20,17 +21,22 @@
         function main() {
             var canvas = document.getElementById("game");
             var ctx = canvas.getContext("2d");
+
+            // Define the sun and planets using values from Wikipedia.
             var sun = makeBody(1.989e30, 0, 0, 0, 0, 6.963e8);
             var planets = [
-              makePlanet(3.3011e23, 5.7909e10, 0.205630, 2439700),
-              makePlanet(4.8675e24, 1.0820e11, 0.006772, 6051800),
-              makePlanet(5.972e24, 1.4960e11, 0.0167086, 6371000),
-              makePlanet(6.4171e23, 2.2793e11, 0.0934, 3389500),
-              makePlanet(1.8986e27, 7.7829e11, 0.048498, 69911000),
-              makePlanet(5.56836e26, 1.4294e12, 0.05555, 58232000),
-              makePlanet(8.6810e25, 2.87504e12, 0.046381, 25362000),
-              makePlanet(1.0243e26, 4.50445e12, 0.009456, 24622000),
+              makePlanet(3.3011e23, 5.7909e10, 0.205630, 2439700), // Mercury
+              makePlanet(4.8675e24, 1.0820e11, 0.006772, 6051800), // Venus
+              makePlanet(5.972e24, 1.4960e11, 0.0167086, 6371000), // Earth
+              makePlanet(6.4171e23, 2.2793e11, 0.0934, 3389500), // Mars
+              //makePlanet(1.8986e27, 7.7829e11, 0.048498, 69911000), // Jupiter
+              //makePlanet(5.56836e26, 1.4294e12, 0.05555, 58232000), // Saturn
+              //makePlanet(8.6810e25, 2.87504e12, 0.046381, 25362000), // Uranus
+              //makePlanet(1.0243e26, 4.50445e12, 0.009456, 24622000), // Neptune
+              //makePlanet(1.303e22, 5.915e12, 0.24905, 1187000), // Pluto
             ];
+
+            // Start the simulation.
             sim = new SolarSim(ctx, sun, planets);
             sim.start();
         }
