@@ -29,16 +29,16 @@
         makePlanet(4.8675e24, 1.0820e11, 0.006772, 6051800), // Venus
         makePlanet(5.972e24, 1.4960e11, 0.0167086, 6371000), // Earth
         makePlanet(6.4171e23, 2.2793e11, 0.0934, 3389500), // Mars
-        //makePlanet(1.8986e27, 7.7829e11, 0.048498, 69911000), // Jupiter
-        //makePlanet(5.56836e26, 1.4294e12, 0.05555, 58232000), // Saturn
-        //makePlanet(8.6810e25, 2.87504e12, 0.046381, 25362000), // Uranus
-        //makePlanet(1.0243e26, 4.50445e12, 0.009456, 24622000), // Neptune
-        //makePlanet(1.303e22, 5.915e12, 0.24905, 1187000), // Pluto
+        makePlanet(1.8986e27, 7.7829e11, 0.048498, 69911000), // Jupiter
+        makePlanet(5.56836e26, 1.4294e12, 0.05555, 58232000), // Saturn
+        makePlanet(8.6810e25, 2.87504e12, 0.046381, 25362000), // Uranus
+        makePlanet(1.0243e26, 4.50445e12, 0.009456, 24622000), // Neptune
+        makePlanet(1.303e22, 5.915e12, 0.24905, 1187000), // Pluto
       ];
 
       // Controls the speed of the simulation. Raising this too high might cause
       // animation delay.
-      const SIM_YEARS_PER_SEC = 0.5;
+      const SIM_YEARS_PER_SEC = 3;
 
       // Start the simulation.
       let sim = new SolarSim(ctx, sun, planets, SIM_YEARS_PER_SEC);

@@ -14,14 +14,10 @@ const FPS = 60;
 
 // Controls the accuracy of the simulation. Raising this might cause visible
 // deviation in orbits. Lowering it might cause animation delay.
-const SIM_SECS_PER_STEP = 50;
+const SIM_SECS_PER_STEP = 100;
 
 // How many milliseconds between frames.
 const MS_PER_FRAME = 1000 / FPS;
-
-// The factor for scaling distances. The denominator should be slightly higher
-// than the furthers distance a planet will be from the sun.
-const SCALE = 1 / (2 * AU);
 
 // Colors to use for displaying the planets.
 const PLANET_COLORS = [
@@ -41,16 +37,16 @@ const PLANET_COLORS = [
 const BODY_RADIUS = 1.5;
 
 // Draw |body| on the canvas in |ctx|.
-function drawBody(ctx, body, color) {
+function drawBody(ctx, scale, body, color) {
   // (0, 0) is at the top-left of the canvas, so find the offsets needed to
   // center our system
   let xOffset = Math.floor(ctx.canvas.width / 2);
   let yOffset = Math.floor(ctx.canvas.height / 2);
   // Calculate the scaling factor for positioning things.
-  let scale = Math.min(xOffset, yOffset) * SCALE;
+  let scaleFactor = Math.min(xOffset, yOffset) * scale;
   // Calculate the (x, y) position of this body on the canvas.
-  let x = body.x * scale + xOffset;
-  let y = -body.y * scale + yOffset;
+  let x = body.x * scaleFactor + xOffset;
+  let y = -body.y * scaleFactor + yOffset;
   // Draw the circle and fill it with the color.
   ctx.beginPath();
   ctx.arc(x, y, BODY_RADIUS, 0, Math.PI * 2, false);
@@ -60,7 +56,7 @@ function drawBody(ctx, body, color) {
 }
 
 // Draw the entire system on the canvas.
-function drawSystem(ctx, sun, bodies) {
+function drawSystem(ctx, scale, sun, bodies) {
   // Clear the canvas.
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   // Check if our window has changed size and update the canvas to match.
@@ -71,10 +67,10 @@ function drawSystem(ctx, sun, bodies) {
     ctx.canvas.height = window.innerHeight;
   }
   // Draw the sun.
-  drawBody(ctx, sun, 0);
+  drawBody(ctx, scale, sun, 0);
   // Draw the planets.
   for (let i = 0; i < bodies.length; i++) {
-    drawBody(ctx, bodies[i], i + 1);
+    drawBody(ctx, scale, bodies[i], i + 1);
   }
 }
 
@@ -119,11 +115,14 @@ class SolarSim {
     const simSecsPerFrame = SECS_PER_YEAR * simYearsPerSec / FPS;
     this.stepsPerFrame = simSecsPerFrame / SIM_SECS_PER_STEP;
     this.simSecsPerStep = simSecsPerFrame / this.stepsPerFrame;
+
+    const maxDist = this.bodies.reduce((acc, b) => Math.max(acc, b.y), 0);
+    this.scale = 1 / (maxDist * 1.05);
   }
 
   // Start the simulation.
   start() {
-    this.nextFrameAt = Date.now() + MS_PER_FRAME;
+    this.nextFrameAt = Date.now();
     this.render();
   }
 
@@ -140,7 +139,7 @@ class SolarSim {
 
   // Renders a frame of the system on the canvas and schedules the next render.
   render() {
-    drawSystem(this.ctx, this.sun, this.bodies);
+    drawSystem(this.ctx, this.scale, this.sun, this.bodies);
     for (let i = 0; i < this.stepsPerFrame; i++) {
       this.step();
     }
@@ -148,8 +147,7 @@ class SolarSim {
     this.nextFrameAt += MS_PER_FRAME;
     let now = Date.now();
     if (this.nextFrameAt < now) {
-      console.warn('Frame calculation is taking longer than one frame.');
-      this.nextFrameAt = now + 300;
+      this.nextFrameAt = now;
     }
     setTimeout(() => {
       this.render();
