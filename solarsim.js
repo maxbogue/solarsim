@@ -1,29 +1,27 @@
-// How many frames to render each second.
-const FPS = 60;
-
-// How many seconds to simulate per step. Increasing this increases the
-// simulation speed without taking more processing power.
-const SECS_PER_STEP = 60;
-
-// How many steps to perform per millisecond. Increasing this numeber will stop
-// having an affect once the computer can't do the steps fast enough.
-const STEPS_PER_MS = 500;
-
-// How many milliseconds between frames.
-const MS_PER_FRAME = Math.floor(1000 / FPS);
-
 // The universal gravitational constant.
 const G = 6.674e-11;
 
 // The distance from the earth to the sun in meters.
 const AU = 1.496e11;
 
+// The mass of the sun in kilograms.
+const SOLAR_MASS = 1.989e30;
+
+const SECS_PER_YEAR = 60 * 60 * 24 * 365;
+
+// How many frames to render each second.
+const FPS = 60;
+
+// Controls the accuracy of the simulation. Raising this might cause visible
+// deviation in orbits. Lowering it might cause animation delay.
+const SIM_SECS_PER_STEP = 50;
+
+// How many milliseconds between frames.
+const MS_PER_FRAME = 1000 / FPS;
+
 // The factor for scaling distances. The denominator should be slightly higher
 // than the furthers distance a planet will be from the sun.
 const SCALE = 1 / (2 * AU);
-
-// The mass of the sun in kilograms.
-const SOLAR_MASS = 1.989e30;
 
 // Colors to use for displaying the planets.
 const PLANET_COLORS = [
@@ -94,23 +92,12 @@ function makeBody(mass, x, y, vx, vy, size) {
 
 // Construct a planet body from its size, semi-major axis, eccentricity, and
 // radius.
-function makePlanet(mass, a, e, size) {
-  // Periapsis.
-  let p = a * (1 - e);
-  // Velocity at periapsis.
-  let vp = Math.sqrt(G * SOLAR_MASS * (2 / p - 1 / a));
-  return makeBody(mass, 0, p, vp, 0, size);
-}
-
-// Perform one step of the simulation. The values in |bodies| are updated.
-function step(sun, bodies) {
-  for (let body of bodies) {
-    let [ax, ay] = accelerationFromGravity(body, sun);
-    body.x = body.x + body.vx * SECS_PER_STEP;
-    body.y = body.y + body.vy * SECS_PER_STEP;
-    body.vx = body.vx + ax * SECS_PER_STEP;
-    body.vy = body.vy + ay * SECS_PER_STEP;
-  }
+function makePlanet(mass, sma, ecc, size) {
+  // Apoapsis.
+  let apo = sma * (1 + ecc);
+  // Velocity at apoapsis.
+  let vApo = Math.sqrt(G * SOLAR_MASS * (2 / apo - 1 / sma));
+  return makeBody(mass, 0, apo, vApo, 0, size);
 }
 
 // Calculate the acceleration due to gravity on |b1| from |b2|.
@@ -123,46 +110,49 @@ function accelerationFromGravity(b1, b2) {
 
 // A SolarSim constructor function.
 class SolarSim {
-  constructor(ctx, sun, bodies) {
+  constructor(ctx, sun, bodies, simYearsPerSec) {
     this.ctx = ctx;
     this.sun = sun;
     this.bodies = bodies;
-    this.stepCount = 0;
-    this.frameCount = 0;
-    this.nextStepAt = 0;
     this.nextFrameAt = 0;
+
+    const simSecsPerFrame = SECS_PER_YEAR * simYearsPerSec / FPS;
+    this.stepsPerFrame = simSecsPerFrame / SIM_SECS_PER_STEP;
+    this.simSecsPerStep = simSecsPerFrame / this.stepsPerFrame;
   }
 
   // Start the simulation.
   start() {
-    this.nextStepAt = Date.now();
-    this.nextFrameAt = Date.now();
+    this.nextFrameAt = Date.now() + MS_PER_FRAME;
     this.render();
-    this.step();
   }
 
-  // Performs a batch of steps and schedules the next batch.
+  // Perform one step of the simulation.
   step() {
-    // Perform STEPS_PER_MS steps at once.
-    for (let i = 0; i < STEPS_PER_MS; i++) {
-      step(this.sun, this.bodies);
-      this.stepCount++;
+    for (let body of this.bodies) {
+      let [ax, ay] = accelerationFromGravity(body, this.sun);
+      body.x = body.x + body.vx * this.simSecsPerStep;
+      body.y = body.y + body.vy * this.simSecsPerStep;
+      body.vx = body.vx + ax * this.simSecsPerStep;
+      body.vy = body.vy + ay * this.simSecsPerStep;
     }
-    // Schedule the next batch of steps for 1ms in the future.
-    this.nextStepAt += 1;
-    setTimeout(() => {
-      this.step();
-    }, this.nextStepAt - Date.now());
   }
 
   // Renders a frame of the system on the canvas and schedules the next render.
   render() {
     drawSystem(this.ctx, this.sun, this.bodies);
-    this.frameCount++;
+    for (let i = 0; i < this.stepsPerFrame; i++) {
+      this.step();
+    }
     // Schedule the next frame render for MS_PER_FRAME in the future.
     this.nextFrameAt += MS_PER_FRAME;
+    let now = Date.now();
+    if (this.nextFrameAt < now) {
+      console.warn('Frame calculation is taking longer than one frame.');
+      this.nextFrameAt = now + 300;
+    }
     setTimeout(() => {
       this.render();
-    }, this.nextFrameAt - Date.now());
+    }, this.nextFrameAt - now);
   }
 }

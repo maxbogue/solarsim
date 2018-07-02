@@ -36,9 +36,13 @@
         //makePlanet(1.303e22, 5.915e12, 0.24905, 1187000), // Pluto
       ];
 
+      // Controls the speed of the simulation. Raising this too high might cause
+      // animation delay.
+      const SIM_YEARS_PER_SEC = 0.5;
+
       // Start the simulation.
-      let sim = new SolarSim(ctx, sun, planets);
-      sim.start();
+      let sim = new SolarSim(ctx, sun, planets, SIM_YEARS_PER_SEC);
+      setTimeout(() => sim.start(), 200);
     }
   </script>
 </head>
