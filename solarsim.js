@@ -7,21 +7,27 @@ const AU = 1.496e11;
 // The mass of the sun in kilograms.
 const SOLAR_MASS = 1.989e30;
 
+// The number of seconds in a year.
 const SECS_PER_YEAR = 60 * 60 * 24 * 365;
 
 // How many frames to render each second.
 const FPS = 60;
 
+// How many milliseconds between frames.
+const MS_PER_FRAME = 1000 / FPS;
+
 // Controls the accuracy of the simulation. Raising this might cause visible
 // deviation in orbits. Lowering it might cause animation delay.
 const SIM_SECS_PER_STEP = 100;
 
-// How many milliseconds between frames.
-const MS_PER_FRAME = 1000 / FPS;
+// Controls the speed of the simulation. Raising this too high might cause
+// animation delay.
+const SIM_SECS_PER_SEC = 20e6;
+
+const SUN_COLOR = '#FFF000';
 
 // Colors to use for displaying the planets.
 const PLANET_COLORS = [
-  '#FFF000', // Sun
   '#FF00AA', // Mercury
   '#84FF00', // Venus
   '#00B3FF', // Earth
@@ -34,29 +40,29 @@ const PLANET_COLORS = [
 ];
 
 // Calculate the body radius in pixels.
-const BODY_RADIUS = 1.5;
+const BODY_RADIUS_PX = 1.5;
 
 // Draw |body| on the canvas in |ctx|.
 function drawBody(ctx, scale, body, color) {
   // (0, 0) is at the top-left of the canvas, so find the offsets needed to
   // center our system
-  let xOffset = Math.floor(ctx.canvas.width / 2);
-  let yOffset = Math.floor(ctx.canvas.height / 2);
+  const xOffset = Math.floor(ctx.canvas.width / 2);
+  const yOffset = Math.floor(ctx.canvas.height / 2);
   // Calculate the scaling factor for positioning things.
-  let scaleFactor = Math.min(xOffset, yOffset) * scale;
+  const scaleFactor = Math.min(xOffset, yOffset) * scale;
   // Calculate the (x, y) position of this body on the canvas.
-  let x = body.x * scaleFactor + xOffset;
-  let y = -body.y * scaleFactor + yOffset;
+  const x = body.x * scaleFactor + xOffset;
+  const y = -body.y * scaleFactor + yOffset;
   // Draw the circle and fill it with the color.
   ctx.beginPath();
-  ctx.arc(x, y, BODY_RADIUS, 0, Math.PI * 2, false);
+  ctx.arc(x, y, BODY_RADIUS_PX, 0, Math.PI * 2, false);
   ctx.closePath();
-  ctx.fillStyle = PLANET_COLORS[color];
+  ctx.fillStyle = color;
   ctx.fill();
 }
 
 // Draw the entire system on the canvas.
-function drawSystem(ctx, scale, sun, bodies) {
+function drawSystem(ctx, scale, sun, planets) {
   // Clear the canvas.
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   // Check if our window has changed size and update the canvas to match.
@@ -67,90 +73,69 @@ function drawSystem(ctx, scale, sun, bodies) {
     ctx.canvas.height = window.innerHeight;
   }
   // Draw the sun.
-  drawBody(ctx, scale, sun, 0);
+  drawBody(ctx, scale, sun, SUN_COLOR);
   // Draw the planets.
-  for (let i = 0; i < bodies.length; i++) {
-    drawBody(ctx, scale, bodies[i], i + 1);
+  for (let i = 0; i < planets.length; i++) {
+    drawBody(ctx, scale, planets[i], PLANET_COLORS[i]);
   }
 }
 
-// Construct a body object with the given mass, position, velocity, and radius.
-function makeBody(mass, x, y, vx, vy, size) {
+// Construct a body object with the given mass, position, and velocity.
+function makeBody(mass, x, y, vx, vy) {
   return {
     mass,
     x,
     y,
     vx,
     vy,
-    size,
   };
 }
 
-// Construct a planet body from its size, semi-major axis, eccentricity, and
-// radius.
-function makePlanet(mass, sma, ecc, size) {
+// Construct a planet body from its mass, semi-major axis, and eccentricity.
+function makePlanet(mass, sma, ecc) {
   // Apoapsis.
-  let apo = sma * (1 + ecc);
+  const apo = sma * (1 + ecc);
   // Velocity at apoapsis.
-  let vApo = Math.sqrt(G * SOLAR_MASS * (2 / apo - 1 / sma));
-  return makeBody(mass, 0, apo, vApo, 0, size);
+  const vApo = Math.sqrt(G * SOLAR_MASS * (2 / apo - 1 / sma));
+  return makeBody(mass, 0, apo, vApo, 0);
 }
 
 // Calculate the acceleration due to gravity on |b1| from |b2|.
 function accelerationFromGravity(b1, b2) {
-  let dx = b2.x - b1.x;
-  let dy = b2.y - b1.y;
-  let a = G * b2.mass / Math.pow(dy * dy + dx * dx, 1.5);
-  return [dx * a, dy * a];
+  const dx = b2.x - b1.x;
+  const dy = b2.y - b1.y;
+  const r = Math.sqrt(dy * dy + dx * dx);
+  const a = G * b2.mass / (r * r);
+  return [a * dx / r, a * dy / r];
 }
 
-// A SolarSim constructor function.
-class SolarSim {
-  constructor(ctx, sun, bodies, simYearsPerSec) {
-    this.ctx = ctx;
-    this.sun = sun;
-    this.bodies = bodies;
-    this.nextFrameAt = 0;
+function startSolarSim(ctx, sun, planets) {
+  const simSecsPerFrame = SIM_SECS_PER_SEC / FPS;
+  const stepsPerFrame = simSecsPerFrame / SIM_SECS_PER_STEP;
+  const simSecsPerStep = simSecsPerFrame / stepsPerFrame;
 
-    const simSecsPerFrame = SECS_PER_YEAR * simYearsPerSec / FPS;
-    this.stepsPerFrame = simSecsPerFrame / SIM_SECS_PER_STEP;
-    this.simSecsPerStep = simSecsPerFrame / this.stepsPerFrame;
-
-    const maxDist = this.bodies.reduce((acc, b) => Math.max(acc, b.y), 0);
-    this.scale = 1 / (maxDist * 1.05);
-  }
-
-  // Start the simulation.
-  start() {
-    this.nextFrameAt = Date.now();
-    this.render();
-  }
+  const maxDist = planets.reduce((acc, b) => Math.max(acc, b.y), 0);
+  const scale = 1 / (maxDist * 1.05); // 5% padding.
 
   // Perform one step of the simulation.
-  step() {
-    for (let body of this.bodies) {
-      let [ax, ay] = accelerationFromGravity(body, this.sun);
-      body.x = body.x + body.vx * this.simSecsPerStep;
-      body.y = body.y + body.vy * this.simSecsPerStep;
-      body.vx = body.vx + ax * this.simSecsPerStep;
-      body.vy = body.vy + ay * this.simSecsPerStep;
+  function step() {
+    for (const planet of planets) {
+      const [ax, ay] = accelerationFromGravity(planet, sun);
+      planet.x = planet.x + planet.vx * simSecsPerStep;
+      planet.y = planet.y + planet.vy * simSecsPerStep;
+      planet.vx = planet.vx + ax * simSecsPerStep;
+      planet.vy = planet.vy + ay * simSecsPerStep;
     }
   }
 
   // Renders a frame of the system on the canvas and schedules the next render.
-  render() {
-    drawSystem(this.ctx, this.scale, this.sun, this.bodies);
-    for (let i = 0; i < this.stepsPerFrame; i++) {
-      this.step();
+  function render() {
+    drawSystem(ctx, scale, sun, planets);
+    for (let i = 0; i < stepsPerFrame; i++) {
+      step();
     }
-    // Schedule the next frame render for MS_PER_FRAME in the future.
-    this.nextFrameAt += MS_PER_FRAME;
-    let now = Date.now();
-    if (this.nextFrameAt < now) {
-      this.nextFrameAt = now;
-    }
-    setTimeout(() => {
-      this.render();
-    }, this.nextFrameAt - now);
+    setTimeout(render, MS_PER_FRAME);
   }
+
+  render();
 }
