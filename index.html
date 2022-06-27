@@ -11,16 +11,26 @@
       padding: 0;
       text-align: center;
       width: 100%;
+      overflow: hidden;
     }
     #game {
       display: block;
     }
   </style>
-  <script src="/solarsim.js"></script>
+  <script src="solarsim.js"></script>
   <script>
     function main() {
-      const canvas = document.getElementById('game');
+      const body = document.getElementsByTagName('body')[0];
+      const canvas = document.getElementById('simulation');
       const ctx = canvas.getContext('2d');
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
 
       // Define the sun and planets using values from Wikipedia.
       const sun = makeBody(1.989e30, 0, 0, 0, 0);
@@ -39,13 +49,11 @@
       // Start the simulation.
       startSolarSim(ctx, sun, planets);
     }
+
+    window.addEventListener('DOMContentLoaded', main);
   </script>
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <script>
-    // Give it a moment for the page to settle.
-    setTimeout(main, 200);
-  </script>
+  <canvas id="simulation"></canvas>
 </body>
 </html>

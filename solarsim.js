@@ -22,7 +22,10 @@ const SIM_SECS_PER_STEP = 100;
 
 // Controls the speed of the simulation. Raising this too high might cause
 // animation delay.
-const SIM_SECS_PER_SEC = 20e6;
+const SIM_SECS_PER_MS = 2e4;
+
+// How many steps to computed per real millisecond.
+const STEPS_PER_MS = SIM_SECS_PER_MS / SIM_SECS_PER_STEP
 
 const SUN_COLOR = '#FFF000';
 
@@ -65,13 +68,6 @@ function drawBody(ctx, scale, body, color) {
 function drawSystem(ctx, scale, sun, planets) {
   // Clear the canvas.
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  // Check if our window has changed size and update the canvas to match.
-  if (ctx.canvas.width !== window.innerWidth) {
-    ctx.canvas.width = window.innerWidth;
-  }
-  if (ctx.canvas.height !== window.innerHeight) {
-    ctx.canvas.height = window.innerHeight;
-  }
   // Draw the sun.
   drawBody(ctx, scale, sun, SUN_COLOR);
   // Draw the planets.
@@ -109,11 +105,25 @@ function accelerationFromGravity(b1, b2) {
   return [a * dx / r, a * dy / r];
 }
 
-function startSolarSim(ctx, sun, planets) {
-  const simSecsPerFrame = SIM_SECS_PER_SEC / FPS;
-  const stepsPerFrame = simSecsPerFrame / SIM_SECS_PER_STEP;
-  const simSecsPerStep = simSecsPerFrame / stepsPerFrame;
+function simulate(f) {
+  let lastMs = 0;
 
+  // Renders a frame of the system on the canvas and schedules the next render.
+  function render(totalMs = 0) {
+    const elapsedMs = totalMs - lastMs;
+    lastMs = totalMs;
+    // If it's been more than a second, skip this frame.
+    if (elapsedMs < 1000) {
+      f(elapsedMs);
+    }
+    requestAnimationFrame(render);
+  }
+
+  render();
+}
+
+function startSolarSim(ctx, sun, planets) {
+  // Find the furthest planet's distance.
   const maxDist = planets.reduce((acc, b) => Math.max(acc, b.y), 0);
   const scale = 1 / (maxDist * 1.05); // 5% padding.
 
@@ -121,21 +131,20 @@ function startSolarSim(ctx, sun, planets) {
   function step() {
     for (const planet of planets) {
       const [ax, ay] = accelerationFromGravity(planet, sun);
-      planet.x = planet.x + planet.vx * simSecsPerStep;
-      planet.y = planet.y + planet.vy * simSecsPerStep;
-      planet.vx = planet.vx + ax * simSecsPerStep;
-      planet.vy = planet.vy + ay * simSecsPerStep;
+      planet.x = planet.x + planet.vx * SIM_SECS_PER_STEP;
+      planet.y = planet.y + planet.vy * SIM_SECS_PER_STEP;
+      planet.vx = planet.vx + ax * SIM_SECS_PER_STEP;
+      planet.vy = planet.vy + ay * SIM_SECS_PER_STEP;
     }
   }
 
-  // Renders a frame of the system on the canvas and schedules the next render.
-  function render() {
-    drawSystem(ctx, scale, sun, planets);
-    for (let i = 0; i < stepsPerFrame; i++) {
+  function updateAndRender(elapsedMs) {
+    const numSteps = STEPS_PER_MS * elapsedMs;
+    for (let i = 0; i < numSteps; i++) {
       step();
     }
-    setTimeout(render, MS_PER_FRAME);
+    drawSystem(ctx, scale, sun, planets);
   }
 
-  render();
+  simulate(updateAndRender);
 }
