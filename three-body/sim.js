@@ -22,31 +22,17 @@ const SIM_SECS_PER_STEP = 100;
 
 // Controls the speed of the simulation. Raising this too high might cause
 // animation delay.
-const SIM_SECS_PER_MS = 2e4;
+//const SIM_SECS_PER_MS = 2e4;
+const SIM_SECS_PER_MS = 10000;
 
 // How many steps to computed per real millisecond.
 const STEPS_PER_MS = SIM_SECS_PER_MS / SIM_SECS_PER_STEP
-
-const SUN_COLOR = '#FFF000';
-
-// Colors to use for displaying the planets.
-const PLANET_COLORS = [
-  '#FF00AA', // Mercury
-  '#84FF00', // Venus
-  '#00B3FF', // Earth
-  '#FF0000', // Mars
-  '#F2B50C', // Jupiter
-  '#BB00FF', // Saturn
-  '#6DF29E', // Uranus
-  '#0779B8', // Neptune
-  '#AAAAAA', // Pluto
-];
 
 // Calculate the body radius in pixels.
 const BODY_RADIUS_PX = 5;
 
 // Draw |body| on the canvas in |ctx|.
-function drawBody(ctx, scale, body, color) {
+function drawBody(ctx, scale, body) {
   // (0, 0) is at the top-left of the canvas, so find the offsets needed to
   // center our system
   const xOffset = Math.floor(ctx.canvas.width / 2);
@@ -60,25 +46,26 @@ function drawBody(ctx, scale, body, color) {
   ctx.beginPath();
   ctx.arc(x, y, BODY_RADIUS_PX, 0, Math.PI * 2, false);
   ctx.closePath();
-  ctx.fillStyle = color;
+  ctx.fillStyle = body.color;
   ctx.fill();
 }
 
 // Draw the entire system on the canvas.
-function drawSystem(ctx, scale, planets) {
+function draw(ctx, scale, planets) {
   // Clear the canvas.
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   // Draw the sun.
-  //drawBody(ctx, scale, sun, SUN_COLOR);
+  //drawBody(ctx, scale, sun);
   // Draw the planets.
   for (let i = 0; i < planets.length; i++) {
-    drawBody(ctx, scale, planets[i], PLANET_COLORS[i]);
+    drawBody(ctx, scale, planets[i]);
   }
 }
 
 // Construct a body object with the given mass, position, and velocity.
-function makeBody(mass, x, y, vx, vy) {
+function makeBody(color, mass, x, y, vx, vy) {
   return {
+    color,
     mass,
     x,
     y,
@@ -88,12 +75,12 @@ function makeBody(mass, x, y, vx, vy) {
 }
 
 // Construct a planet body from its mass, semi-major axis, and eccentricity.
-function makePlanet(mass, sma, ecc) {
+function makePlanet(color, mass, sma, ecc) {
   // Apoapsis.
   const apo = sma * (1 + ecc);
   // Velocity at apoapsis.
   const vApo = Math.sqrt(G * SOLAR_MASS * (2 / apo - 1 / sma));
-  return makeBody(mass, 0, apo, vApo, 0);
+  return makeBody(color, mass, 0, apo, vApo, 0);
 }
 
 // Calculate the acceleration due to gravity on |b1| from |b2|.
@@ -157,13 +144,12 @@ function step(planets) {
 }
 
 function startSimulation(ctx, inputPlanets) {
-  // Find the furthest planet's distance.
-  //const maxDist = planets.reduce((acc, b) => Math.max(acc, b.y), 0);
   const maxDist = AU / 10;
   const scale = 1 / (maxDist * 1.05); // 5% padding.
   const r = maxDist;
 
   const planets = inputPlanets.map(planet => makeBody(
+    planet.color,
     planet.mass,
     Math.random() * r - r / 2,
     Math.random() * r - r / 2,
@@ -176,7 +162,7 @@ function startSimulation(ctx, inputPlanets) {
     for (let i = 0; i < numSteps; i++) {
       step(planets);
     }
-    drawSystem(ctx, scale, planets);
+    draw(ctx, scale, planets);
   }
 
   return simulate(updateAndRender);
