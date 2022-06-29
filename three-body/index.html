@@ -19,18 +19,6 @@
   </style>
   <script src="sim.js"></script>
   <script>
-    // Define the sun and planets using values from Wikipedia.
-    const SUN = makeBody('#FFF000', 1.989e30, 0, 0, 0, 0);
-    const MERCURY = makePlanet('#FF00AA', 3.3011e23, 5.7909e10, 0.205630);
-    const VENUS = makePlanet('#84FF00', 4.8675e24, 1.0820e11, 0.006772);
-    const EARTH = makePlanet('#00B3FF', 5.972e24, 1.4960e11, 0.0167086);
-    const MARS = makePlanet('#FF0000', 6.4171e23, 2.2793e11, 0.0934);
-    const JUPITER = makePlanet('#F2B50C', 1.8986e27, 7.7829e11, 0.048498);
-    const SATURN = makePlanet('#BB00FF', 5.56836e26, 1.4294e12, 0.05555);
-    const URANUS = makePlanet('#6DF29E', 8.6810e25, 2.87504e12, 0.046381);
-    const NEPTUNE = makePlanet('#0779B8', 1.0243e26, 4.50445e12, 0.009456);
-    const PLUTO = makePlanet('#AAAAAA', 1.303e22, 5.915e12, 0.24905);
-
     function main() {
       const body = document.getElementsByTagName('body')[0];
       const canvas = document.getElementById('simulation');
@@ -44,19 +32,21 @@
       window.addEventListener('resize', resize);
       resize();
 
+      const r = AU / 10;
       const planets = [
+        MERCURY,
+        VENUS,
         EARTH,
-        EARTH,
-        EARTH,
+        MARS,
       ];
 
-      let stopSimulation = startSimulation(ctx, planets);
+      let stopSimulation = startSimulation(ctx, planets, r);
       canvas.addEventListener('click', () => {
         if (stopSimulation) {
           stopSimulation();
           stopSimulation = null;
         } else {
-          stopSimulation = startSimulation(ctx, planets);
+          stopSimulation = startSimulation(ctx, planets, r);
         }
       });
     }

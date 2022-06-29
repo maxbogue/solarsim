@@ -4,21 +4,21 @@ const G = 6.674e-11;
 // The distance from the earth to the sun in meters.
 const AU = 1.496e11;
 
-// The mass of the sun in kilograms.
-const SOLAR_MASS = 1.989e30;
-
-// The number of seconds in a year.
-const SECS_PER_YEAR = 60 * 60 * 24 * 365;
-
-// How many frames to render each second.
-const FPS = 60;
-
-// How many milliseconds between frames.
-const MS_PER_FRAME = 1000 / FPS;
+// Define the sun and planets using values from Wikipedia.
+const SUN = makeBody('#FFF000', 1.989e30, 0, 0, 0, 0);
+const MERCURY = makePlanet('#FF00AA', 3.3011e23, 5.7909e10, 0.205630);
+const VENUS = makePlanet('#84FF00', 4.8675e24, 1.0820e11, 0.006772);
+const EARTH = makePlanet('#00B3FF', 5.972e24, 1.4960e11, 0.0167086);
+const MARS = makePlanet('#FF0000', 6.4171e23, 2.2793e11, 0.0934);
+const JUPITER = makePlanet('#F2B50C', 1.8986e27, 7.7829e11, 0.048498);
+const SATURN = makePlanet('#BB00FF', 5.56836e26, 1.4294e12, 0.05555);
+const URANUS = makePlanet('#6DF29E', 8.6810e25, 2.87504e12, 0.046381);
+const NEPTUNE = makePlanet('#0779B8', 1.0243e26, 4.50445e12, 0.009456);
+const PLUTO = makePlanet('#AAAAAA', 1.303e22, 5.915e12, 0.24905);
 
 // Controls the accuracy of the simulation. Raising this might cause visible
 // deviation in orbits. Lowering it might cause animation delay.
-const SIM_SECS_PER_STEP = 100;
+const SIM_SECS_PER_STEP = 1000;
 
 // Controls the speed of the simulation. Raising this too high might cause
 // animation delay.
@@ -29,7 +29,28 @@ const SIM_SECS_PER_MS = 10000;
 const STEPS_PER_MS = SIM_SECS_PER_MS / SIM_SECS_PER_STEP
 
 // Calculate the body radius in pixels.
-const BODY_RADIUS_PX = 5;
+const BODY_RADIUS_PX = 4;
+
+// Construct a body object with the given mass, position, and velocity.
+function makeBody(color, mass, x, y, vx, vy) {
+  return {
+    color,
+    mass,
+    x,
+    y,
+    vx,
+    vy,
+  };
+}
+
+// Construct a planet body from its mass, semi-major axis, and eccentricity.
+function makePlanet(color, mass, sma, ecc) {
+  // Apoapsis.
+  const apo = sma * (1 + ecc);
+  // Velocity at apoapsis.
+  const vApo = Math.sqrt(G * SUN.mass * (2 / apo - 1 / sma));
+  return makeBody(color, mass, 0, apo, vApo, 0);
+}
 
 // Draw |body| on the canvas in |ctx|.
 function drawBody(ctx, scale, body) {
@@ -51,36 +72,13 @@ function drawBody(ctx, scale, body) {
 }
 
 // Draw the entire system on the canvas.
-function draw(ctx, scale, planets) {
+function draw(ctx, scale, bodies) {
   // Clear the canvas.
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  // Draw the sun.
-  //drawBody(ctx, scale, sun);
-  // Draw the planets.
-  for (let i = 0; i < planets.length; i++) {
-    drawBody(ctx, scale, planets[i]);
+  // Draw the bodies.
+  for (const body of bodies) {
+    drawBody(ctx, scale, body);
   }
-}
-
-// Construct a body object with the given mass, position, and velocity.
-function makeBody(color, mass, x, y, vx, vy) {
-  return {
-    color,
-    mass,
-    x,
-    y,
-    vx,
-    vy,
-  };
-}
-
-// Construct a planet body from its mass, semi-major axis, and eccentricity.
-function makePlanet(color, mass, sma, ecc) {
-  // Apoapsis.
-  const apo = sma * (1 + ecc);
-  // Velocity at apoapsis.
-  const vApo = Math.sqrt(G * SOLAR_MASS * (2 / apo - 1 / sma));
-  return makeBody(color, mass, 0, apo, vApo, 0);
 }
 
 // Calculate the acceleration due to gravity on |b1| from |b2|.
@@ -109,22 +107,27 @@ function accelerationFromBodies(onBody, bodies) {
   return [ax, ay];
 }
 
-function simulate(f, duration) {
-  let lastMs = 0;
+/**
+ * Generic function for starting and stoping a simulation.
+ *
+ * @param next The function that renders a frame of the animation. Should
+ *             accept the elapsed time since last invocation in ms.
+ */
+function simulate(next) {
+  let lastMs;
   let frameId;
 
   // Renders a frame of the system on the canvas and schedules the next render.
   function render(totalMs = 0) {
+    lastMs = lastMs || totalMs;
     const elapsedMs = totalMs - lastMs;
     lastMs = totalMs;
     // If it's been more than a second, skip this frame.
     if (elapsedMs < 1000) {
-      f(elapsedMs);
+      next(elapsedMs);
     }
 
-    if (!duration || totalMs < duration) {
-      frameId = requestAnimationFrame(render);
-    }
+    frameId = requestAnimationFrame(render);
   }
 
   render();
@@ -143,12 +146,10 @@ function step(planets) {
   }
 }
 
-function startSimulation(ctx, inputPlanets) {
-  const maxDist = AU / 10;
-  const scale = 1 / (maxDist * 1.05); // 5% padding.
-  const r = maxDist;
+function startSimulation(ctx, inputBodies, r) {
+  const scale = 1 / r;
 
-  const planets = inputPlanets.map(planet => makeBody(
+  const planets = inputBodies.map(planet => makeBody(
     planet.color,
     planet.mass,
     Math.random() * r - r / 2,
