@@ -81,8 +81,8 @@ function draw(ctx, scale, bodies) {
   }
 }
 
-// Calculate the acceleration due to gravity on |b1| from |b2|.
-function accelerationFromGravity(b1, b2) {
+// Calculate the force due to gravity between |b1| and |b2|.
+function forceFromGravity(b1, b2) {
   const minR = 1e8;
   const dx = b2.x - b1.x;
   const dy = b2.y - b1.y;
@@ -90,8 +90,9 @@ function accelerationFromGravity(b1, b2) {
   if (r < minR) {
     r = minR;
   }
-  const a = G * b2.mass / (r * r);
-  return [a * dx / r, a * dy / r];
+  const f = G * b1.mass * b2.mass / (r * r);
+  // dx / r is the cos, dy / r is the sin.
+  return [f * dx / r, f * dy / r];
 }
 
 function accelerationFromBodies(onBody, bodies) {
@@ -105,6 +106,51 @@ function accelerationFromBodies(onBody, bodies) {
     }
   }
   return [ax, ay];
+}
+
+// Perform one step of the simulation.
+function step(planets) {
+  const forces = planets.map(() => [0, 0]);
+  for (let i = 0; i < planets.length; i++) {
+    for (let j = i + 1; j < planets.length; j++) {
+      const [fx, fy] = forceFromGravity(planets[i], planets[j]);
+      forces[i][0] += fx;
+      forces[i][1] += fy;
+      forces[j][0] -= fx;
+      forces[j][1] -= fy;
+    }
+  }
+
+  for (let i = 0; i < planets.length; i++) {
+    const planet = planets[i];
+    planet.x = planet.x + planet.vx * SIM_SECS_PER_STEP;
+    planet.y = planet.y + planet.vy * SIM_SECS_PER_STEP;
+    planet.vx = planet.vx + forces[i][0] / planet.mass * SIM_SECS_PER_STEP;
+    planet.vy = planet.vy + forces[i][1] / planet.mass * SIM_SECS_PER_STEP;
+  }
+}
+
+function startSimulation(ctx, inputBodies, r) {
+  const scale = 1 / r;
+
+  const planets = inputBodies.map(planet => makeBody(
+    planet.color,
+    planet.mass,
+    Math.random() * r - r / 2,
+    Math.random() * r - r / 2,
+    0,
+    0
+  ));
+
+  function updateAndRender(elapsedMs) {
+    const numSteps = STEPS_PER_MS * elapsedMs;
+    for (let i = 0; i < numSteps; i++) {
+      step(planets);
+    }
+    draw(ctx, scale, planets);
+  }
+
+  return simulate(updateAndRender);
 }
 
 /**
@@ -133,38 +179,4 @@ function simulate(next) {
   render();
 
   return () => cancelAnimationFrame(frameId);
-}
-
-// Perform one step of the simulation.
-function step(planets) {
-  for (const planet of planets) {
-    planet.x = planet.x + planet.vx * SIM_SECS_PER_STEP;
-    planet.y = planet.y + planet.vy * SIM_SECS_PER_STEP;
-    const [ax, ay] = accelerationFromBodies(planet, planets);
-    planet.vx = planet.vx + ax * SIM_SECS_PER_STEP;
-    planet.vy = planet.vy + ay * SIM_SECS_PER_STEP;
-  }
-}
-
-function startSimulation(ctx, inputBodies, r) {
-  const scale = 1 / r;
-
-  const planets = inputBodies.map(planet => makeBody(
-    planet.color,
-    planet.mass,
-    Math.random() * r - r / 2,
-    Math.random() * r - r / 2,
-    0,
-    0
-  ));
-
-  function updateAndRender(elapsedMs) {
-    const numSteps = STEPS_PER_MS * elapsedMs;
-    for (let i = 0; i < numSteps; i++) {
-      step(planets);
-    }
-    draw(ctx, scale, planets);
-  }
-
-  return simulate(updateAndRender);
 }
