@@ -19,7 +19,7 @@
   </style>
   <script src="sim.js"></script>
   <script>
-    function main() {
+    window.addEventListener('load', () => {
       const body = document.getElementsByTagName('body')[0];
       const canvas = document.getElementById('simulation');
       const ctx = canvas.getContext('2d');
@@ -60,9 +60,7 @@
           stopSimulation = start();
         }
       });
-    }
-
-    window.addEventListener('load', main);
+    });
   </script>
 </head>
 <body>

@@ -31,16 +31,27 @@ const STEPS_PER_MS = SIM_SECS_PER_MS / SIM_SECS_PER_STEP
 // Calculate the body radius in pixels.
 const BODY_RADIUS_PX = 4;
 
-// Construct a body object with the given mass, position, and velocity.
-function makeBody(color, mass, x, y, vx, vy) {
-  return {
-    color,
-    mass,
-    x,
-    y,
-    vx,
-    vy,
-  };
+function startSimulation(ctx, inputBodies, mouseObject, r) {
+  const scale = 1 / r;
+
+  const planets = inputBodies.map(planet => makeBody(
+    planet.color,
+    planet.mass,
+    Math.random() * r - r / 2,
+    Math.random() * r - r / 2,
+    0,
+    0
+  ));
+
+  function updateAndRender(elapsedMs) {
+    const numSteps = STEPS_PER_MS * elapsedMs;
+    for (let i = 0; i < numSteps; i++) {
+      step(planets, mouseObject);
+    }
+    draw(ctx, scale, planets);
+  }
+
+  return simulate(updateAndRender);
 }
 
 // Construct a planet body from its mass, semi-major axis, and eccentricity.
@@ -50,6 +61,21 @@ function makePlanet(color, mass, sma, ecc) {
   // Velocity at apoapsis.
   const vApo = Math.sqrt(G * SUN.mass * (2 / apo - 1 / sma));
   return makeBody(color, mass, 0, apo, vApo, 0);
+}
+
+// Construct a body object with the given mass, position, and velocity.
+function makeBody(color, mass, x, y, vx, vy) {
+  return { color, mass, x, y, vx, vy };
+}
+
+// Draw the entire system on the canvas.
+function draw(ctx, scale, bodies) {
+  // Clear the canvas.
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  // Draw the bodies.
+  for (const body of bodies) {
+    drawBody(ctx, scale, body);
+  }
 }
 
 // Draw |body| on the canvas in |ctx|.
@@ -69,43 +95,6 @@ function drawBody(ctx, scale, body) {
   ctx.closePath();
   ctx.fillStyle = body.color;
   ctx.fill();
-}
-
-// Draw the entire system on the canvas.
-function draw(ctx, scale, bodies) {
-  // Clear the canvas.
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  // Draw the bodies.
-  for (const body of bodies) {
-    drawBody(ctx, scale, body);
-  }
-}
-
-// Calculate the force due to gravity between |b1| and |b2|.
-function forceFromGravity(b1, b2) {
-  const minR = 1e8;
-  const dx = b2.x - b1.x;
-  const dy = b2.y - b1.y;
-  let r = Math.sqrt(dy * dy + dx * dx);
-  if (r < minR) {
-    r = minR;
-  }
-  const f = G * b1.mass * b2.mass / (r * r);
-  // dx / r is the cos, dy / r is the sin.
-  return [f * dx / r, f * dy / r];
-}
-
-function accelerationFromBodies(onBody, bodies) {
-  let ax = 0;
-  let ay = 0;
-  for (const body of bodies) {
-    if (body !== onBody) {
-      const acc = accelerationFromGravity(onBody, body);
-      ax += acc[0];
-      ay += acc[1];
-    }
-  }
-  return [ax, ay];
 }
 
 // Perform one step of the simulation.
@@ -131,27 +120,18 @@ function step(planets, mouseObject) {
   }
 }
 
-function startSimulation(ctx, inputBodies, mouseObject, r) {
-  const scale = 1 / r;
-
-  const planets = inputBodies.map(planet => makeBody(
-    planet.color,
-    planet.mass,
-    Math.random() * r - r / 2,
-    Math.random() * r - r / 2,
-    0,
-    0
-  ));
-
-  function updateAndRender(elapsedMs) {
-    const numSteps = STEPS_PER_MS * elapsedMs;
-    for (let i = 0; i < numSteps; i++) {
-      step(planets, mouseObject);
-    }
-    draw(ctx, scale, planets);
+// Calculate the force due to gravity between |b1| and |b2|.
+function forceFromGravity(b1, b2) {
+  const minR = 1e8;
+  const dx = b2.x - b1.x;
+  const dy = b2.y - b1.y;
+  let r = Math.sqrt(dy * dy + dx * dx);
+  if (r < minR) {
+    r = minR;
   }
-
-  return simulate(updateAndRender);
+  const f = G * b1.mass * b2.mass / (r * r);
+  // dx / r is the cos, dy / r is the sin.
+  return [f * dx / r, f * dy / r];
 }
 
 /**
