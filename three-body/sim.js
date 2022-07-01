@@ -109,11 +109,12 @@ function accelerationFromBodies(onBody, bodies) {
 }
 
 // Perform one step of the simulation.
-function step(planets) {
-  const forces = planets.map(() => [0, 0]);
-  for (let i = 0; i < planets.length; i++) {
-    for (let j = i + 1; j < planets.length; j++) {
-      const [fx, fy] = forceFromGravity(planets[i], planets[j]);
+function step(planets, mouseObject) {
+  const objects = [...planets, mouseObject];
+  const forces = objects.map(() => [0, 0]);
+  for (let i = 0; i < objects.length; i++) {
+    for (let j = i + 1; j < objects.length; j++) {
+      const [fx, fy] = forceFromGravity(objects[i], objects[j]);
       forces[i][0] += fx;
       forces[i][1] += fy;
       forces[j][0] -= fx;
@@ -130,7 +131,7 @@ function step(planets) {
   }
 }
 
-function startSimulation(ctx, inputBodies, r) {
+function startSimulation(ctx, inputBodies, mouseObject, r) {
   const scale = 1 / r;
 
   const planets = inputBodies.map(planet => makeBody(
@@ -145,7 +146,7 @@ function startSimulation(ctx, inputBodies, r) {
   function updateAndRender(elapsedMs) {
     const numSteps = STEPS_PER_MS * elapsedMs;
     for (let i = 0; i < numSteps; i++) {
-      step(planets);
+      step(planets, mouseObject);
     }
     draw(ctx, scale, planets);
   }
