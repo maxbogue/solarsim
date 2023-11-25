@@ -31,14 +31,12 @@ const STEPS_PER_MS = SIM_SECS_PER_MS / SIM_SECS_PER_STEP
 // Calculate the body radius in pixels.
 const BODY_RADIUS_PX = 4;
 
-function startSimulation(ctx, inputBodies, mouseObject, r) {
-  const scale = 1 / r;
-
+function startSimulation(ctx, inputBodies, mouseObject, scale) {
   const planets = inputBodies.map(planet => makeBody(
     planet.color,
     planet.mass,
-    Math.random() * r - r / 2,
-    Math.random() * r - r / 2,
+    Math.random() * scale - scale / 2,
+    Math.random() * scale - scale / 2,
     0,
     0
   ));
@@ -85,7 +83,7 @@ function drawBody(ctx, scale, body) {
   const xOffset = Math.floor(ctx.canvas.width / 2);
   const yOffset = Math.floor(ctx.canvas.height / 2);
   // Calculate the scaling factor for positioning things.
-  const scaleFactor = Math.min(xOffset, yOffset) * scale;
+  const scaleFactor = Math.min(xOffset, yOffset) / scale;
   // Calculate the (x, y) position of this body on the canvas.
   const x = body.x * scaleFactor + xOffset;
   const y = -body.y * scaleFactor + yOffset;
@@ -99,7 +97,7 @@ function drawBody(ctx, scale, body) {
 
 // Perform one step of the simulation.
 function step(planets, mouseObject) {
-  const objects = [...planets, mouseObject];
+  const objects = mouseObject ? [...planets, mouseObject] : planets;
   const forces = objects.map(() => [0, 0]);
   for (let i = 0; i < objects.length; i++) {
     for (let j = i + 1; j < objects.length; j++) {
@@ -122,7 +120,7 @@ function step(planets, mouseObject) {
 
 // Calculate the force due to gravity between |b1| and |b2|.
 function forceFromGravity(b1, b2) {
-  const minR = 1e8;
+  const minR = 1e9;
   const dx = b2.x - b1.x;
   const dy = b2.y - b1.y;
   let r = Math.sqrt(dy * dy + dx * dx);

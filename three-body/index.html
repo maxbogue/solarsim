@@ -32,7 +32,7 @@
       window.addEventListener('resize', resize);
       resize();
 
-      const r = AU / 10;
+      const scale = AU / 10;
       const planets = [
         EARTH,
         EARTH,
@@ -44,13 +44,19 @@
         const xOffset = Math.floor(canvas.width / 2);
         const yOffset = Math.floor(canvas.height / 2);
         // Calculate the scaling factor for positioning things.
-        const scaleFactor = r / Math.min(xOffset, yOffset);
+        const scaleFactor = scale / Math.min(xOffset, yOffset);
         // Calculate the (x, y) position of this body on the canvas.
         mouseObject.x = (e.clientX - xOffset) * scaleFactor;
         mouseObject.y = -(e.clientY - yOffset) * scaleFactor;
       })
 
-      const start = () => startSimulation(ctx, planets, mouseObject, r)
+      const start = () => startSimulation(
+        ctx,
+        planets,
+        mouseObject /* null to disable */,
+        scale
+      );
+
       let stopSimulation = start();
       canvas.addEventListener('click', () => {
         if (stopSimulation) {

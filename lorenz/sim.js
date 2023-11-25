@@ -12,9 +12,10 @@ const SECS_PER_STEP = 0.001 / STEPS_PER_MS;
 
 function startSimulation(ctx) {
   const state = [
-    { x: 10, y: 10, z: 10, color: '#00B3FF' },
-    { x: 10, y: 10, z: 10.001, color: '#84FF00' },
+    { x: 10, y: 10, z: 10, color: '#FFFF00' },
+    { x: 10, y: 10, z: 10.000000001, color: '#00B3FF' },
     { x: 10, y: 10, z: 10.000001, color: '#FF0000' },
+    { x: 10, y: 10, z: 10.0001, color: '#84FF00' },
   ];
 
   function updateAndRender(elapsedMs, count) {
@@ -27,7 +28,7 @@ function startSimulation(ctx) {
 
 // Perform one step of the simulation.
 function step(state, elapsedMs, count) {
-  const numSteps = elapsedMs * STEPS_PER_MS
+  const numSteps = elapsedMs * STEPS_PER_MS;
   for (let i = 0; i < numSteps; i++) {
     for (const object of state) {
       const { x, y, z } = object;
